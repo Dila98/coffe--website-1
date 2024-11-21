@@ -1,11 +1,6 @@
 <?php
 session_start();
-try {
-    $conn = new PDO("mysql:host=localhost;dbname=coffee_shop", "root", "");
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
-}
+require_once 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
@@ -136,12 +131,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .login-container p {
             color: white;
         }
+
+        .alert {
+            background: rgba(220, 53, 69, 0.9);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            padding: 1rem;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+            backdrop-filter: blur(10px);
+        }
+
+        .alert .btn-close {
+            filter: brightness(0) invert(1);
+            opacity: 0.8;
+        }
+
+        .alert .btn-close:hover {
+            opacity: 1;
+        }
+
+        .alert-dismissible .btn-close {
+            padding: 1.25rem;
+        }
     </style>
 </head>
 <body>
     <div class="container d-flex justify-content-center align-items-center">
         <div class="login-container">
             <h2 class="text-center mb-4">Welcome Back!</h2>
+            
+            <?php if (isset($error)): ?>
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <?php echo htmlspecialchars($error); ?>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            <?php endif; ?>
             
             <!-- Login Form -->
             <form action="login.php" method="POST">

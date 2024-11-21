@@ -1,13 +1,10 @@
 <?php
 session_start();
-try {
-    $conn = new PDO("mysql:host=localhost;dbname=coffee_shop", "root", "");
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-} catch(PDOException $e) {
-    die("Connection failed: " . $e->getMessage());
-}
+require_once 'config.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    error_log("Processing signup form submission");
+    
     $name = filter_input(INPUT_POST, 'name', FILTER_SANITIZE_STRING);
     $email = filter_input(INPUT_POST, 'email', FILTER_SANITIZE_EMAIL);
     $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
@@ -21,18 +18,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         if ($check_query->rowCount() > 0) {
             $error = "Username or email already exists!";
+            error_log("Signup failed: Username or email already exists");
         } else {
             // Insert new user
             $insert_query = $conn->prepare("INSERT INTO users (name, email, username, password) VALUES (?, ?, ?, ?)");
-            $insert_query->execute([$name, $email, $username, $hashed_password]);
+            $success = $insert_query->execute([$name, $email, $username, $hashed_password]);
             
-            // Log them in automatically
-            $_SESSION['user_id'] = $conn->lastInsertId();
-            $_SESSION['username'] = $username;
-            $_SESSION['name'] = $name;
-            
-            header("Location: index.php");
-            exit();
+            if ($success) {
+                // Get the new user's ID
+                $user_id = $conn->lastInsertId();
+                error_log("New user created with ID: " . $user_id);
+
+                // Set session variables
+                $_SESSION['user_id'] = $user_id;
+                $_SESSION['username'] = $username;
+                $_SESSION['name'] = $name;
+                
+                error_log("Session variables set: " . print_r($_SESSION, true));
+                
+                // Redirect with exit
+                header("Location: index.php");
+                exit();
+            } else {
+                error_log("Failed to insert new user");
+                $error = "Failed to create account. Please try again.";
+            }
         }
     } catch(PDOException $e) {
         error_log("Signup error: " . $e->getMessage());
@@ -158,6 +168,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="container d-flex justify-content-center align-items-center">
         <div class="login-container">
             <h2 class="text-center mb-4">Create Account</h2>
+            
+            <?php if (isset($error)): ?>
+            <div class="alert alert-danger" role="alert">
+                <?php echo htmlspecialchars($error); ?>
+            </div>
+            <?php endif; ?>
             
             <form action="signup.php" method="POST">
                 <div class="mb-3">

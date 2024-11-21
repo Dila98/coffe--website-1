@@ -1,5 +1,6 @@
 <?php
 session_start();
+require_once 'config.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
@@ -7,13 +8,13 @@ if (!isset($_SESSION['user_id'])) {
 }
 
 try {
-    $conn = new PDO("mysql:host=localhost;dbname=coffee_shop", "root", "");
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
     // Fetch user details
     $stmt = $conn->prepare("SELECT * FROM users WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
+
+    // Add debugging for user ID
+    error_log("Checking orders for user_id: " . $_SESSION['user_id']);
 
     // Fetch user orders with menu item details
     $stmt = $conn->prepare("
@@ -33,10 +34,22 @@ try {
         ORDER BY o.created_at DESC
     ");
     $stmt->execute([$_SESSION['user_id']]);
+    
+    // Add debugging for query results
     $orders = $stmt->fetchAll();
+    error_log("Number of orders found: " . count($orders));
+    
+    // If no orders found, let's check if the order exists at all
+    if (empty($orders)) {
+        $check_stmt = $conn->prepare("SELECT COUNT(*) FROM orders WHERE user_id = ?");
+        $check_stmt->execute([$_SESSION['user_id']]);
+        $order_count = $check_stmt->fetchColumn();
+        error_log("Raw orders count in database: " . $order_count);
+    }
 
 } catch(PDOException $e) {
-    error_log("Error: " . $e->getMessage());
+    error_log("Database Error: " . $e->getMessage());
+    error_log("SQL State: " . $e->getCode());
     $error = "An error occurred. Please try again later.";
 }
 ?>
@@ -130,8 +143,8 @@ try {
                                             <div class="d-flex justify-content-between align-items-center mt-2">
                                                 <div>
                                                     <p class="mb-0">Quantity: <?php echo $order['quantity']; ?></p>
-                                                    <p class="mb-0">Price per item: $<?php echo number_format($order['price'], 2); ?></p>
-                                                    <p class="mb-0"><strong>Total: $<?php echo number_format($order['quantity'] * $order['price'], 2); ?></strong></p>
+                                                    <p class="mb-0">Price per item: LKR<?php echo number_format($order['price'], 2); ?></p>
+                                                    <p class="mb-0"><strong>Total: LKR <?php echo number_format($order['quantity'] * $order['price'], 2); ?></strong></p>
                                                 </div>
                                                 <small class="text-muted">
                                                     <?php echo date('M d, Y h:i A', strtotime($order['created_at'])); ?>

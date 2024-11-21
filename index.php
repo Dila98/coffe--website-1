@@ -96,7 +96,7 @@ try {
                     <div class="menu-details">
                         <h3 class="name"><?php echo $item['name']; ?></h3>
                         <p class="text"><?php echo $item['description']; ?></p>
-                        <p class="price">$<?php echo number_format($item['price'], 2); ?></p>
+                        <p class="price">LKR <?php echo number_format($item['price'], 2); ?></p>
                         <?php if(isset($_SESSION['user_id'])): ?>
                             <form action="process_order.php" method="POST" class="order-form">
                                 <input type="hidden" name="menu_item_id" value="<?php echo $item['id']; ?>">
@@ -159,7 +159,7 @@ try {
           </div>
           <div class="about-details">
             <h2 class="section-title">About Us</h2>
-            <p class="text">At Coffee House in Berndorf, Germany, we pride ourselves on being a go-to destination for coffee lovers and conversation seekers alike. We're dedicated to providing an exceptional coffee experience in a cozy and inviting atmosphere, where guests can relax, unwind, and enjoy their time in comfort.</p>
+            <p class="text">At Coffee House in Colombo, SriLanka, we pride ourselves on being a go-to destination for coffee lovers and conversation seekers alike. We're dedicated to providing an exceptional coffee experience in a cozy and inviting atmosphere, where guests can relax, unwind, and enjoy their time in comfort.</p>
             <div class="social-link-list">
               <a href="#" class="social-link"><i class="fa-brands fa-facebook"></i></a>
               <a href="#" class="social-link"><i class="fa-brands fa-instagram"></i></a>
@@ -176,15 +176,15 @@ try {
           <ul class="contact-info-list">
             <li class="contact-info">
               <i class="fa-solid fa-location-crosshairs"></i>
-              <p>123 Campsite Avenue, Wilderness, CA 98765</p>
+              <p> main road,colombo 3</p>
             </li>
             <li class="contact-info">
               <i class="fa-regular fa-envelope"></i>
-              <p>info@coffeeshopwebsite.com</p>
+              <p>info@coffeelanka.com</p>
             </li>
             <li class="contact-info">
               <i class="fa-solid fa-phone"></i>
-              <p>(123) 456-78909</p>
+              <p>0112345678</p>
             </li>
             <li class="contact-info">
               <i class="fa-regular fa-clock"></i>
@@ -200,7 +200,7 @@ try {
             </li>
             <li class="contact-info">
               <i class="fa-solid fa-globe"></i>
-              <p>www.codingnepalweb.com</p>
+              <p>www.coffeelanka.com</p>
             </li>
           </ul>
 
