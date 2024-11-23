@@ -23,6 +23,9 @@
             </li>
             <?php
             if(isset($_SESSION['user_id'])) {
+                if(isset($_SESSION['is_admin']) && $_SESSION['is_admin'] === true) {
+                    echo '<li class="nav-item"><a href="admin.php" class="nav-link">Admin Dashboard</a></li>';
+                }
                 echo '<li class="nav-item"><a href="account.php" class="nav-link">My Account</a></li>';
                 echo '<li class="nav-item"><a href="logout.php" class="nav-link">Logout</a></li>';
             } else {

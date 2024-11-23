@@ -70,3 +70,11 @@ INSERT INTO menu_items (name, description, price, image_path, category_id) VALUE
 ('Cold Brew', 'Smooth and rich coffee slowly steeped in cold water for 12 hours, served over ice. Less acidic with a naturally sweet taste.', 1590.00, 'Cold Brew .jpeg', 2),
 
 ('Mocha Frappuccino', 'Blended coffee with rich mocha sauce, milk and ice, topped with whipped cream and chocolate drizzle. A chocolate lovers dream.', 2090.00, 'Frappuccino.jpeg', 2);
+
+
+
+ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
+
+-- Create an admin user (password: admin123)
+INSERT INTO users (name, email, username, password, is_admin) 
+VALUES ('Admin', 'admin@coffee.com', 'admin', '$2y$10$8K1p/bFhF0TuWX8H2XQ6/.WX.GGH.j4aaC5bZjh6QVcXTOc1jKEdi', TRUE);

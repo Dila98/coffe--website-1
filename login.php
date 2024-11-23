@@ -16,8 +16,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['name'] = $user['name'];
+            $_SESSION['is_admin'] = $user['is_admin'] ?? false;
             
-            header("Location: index.php");
+            // Redirect admin users to admin dashboard
+            if ($_SESSION['is_admin']) {
+                header("Location: admin.php");
+            } else {
+                header("Location: index.php");
+            }
             exit();
         } else {
             $error = "Invalid username/email or password!";
