@@ -10,6 +10,7 @@ CREATE TABLE users (
     email VARCHAR(100) UNIQUE NOT NULL,
     username VARCHAR(50) UNIQUE NOT NULL,  -- Added username field
     password VARCHAR(255) NOT NULL,
+    is_admin BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -72,9 +73,16 @@ INSERT INTO menu_items (name, description, price, image_path, category_id) VALUE
 ('Mocha Frappuccino', 'Blended coffee with rich mocha sauce, milk and ice, topped with whipped cream and chocolate drizzle. A chocolate lovers dream.', 2090.00, 'Frappuccino.jpeg', 2);
 
 
-
-ALTER TABLE users ADD COLUMN is_admin BOOLEAN DEFAULT FALSE;
-
--- Create an admin user (password: admin123)
-INSERT INTO users (name, email, username, password, is_admin) 
-VALUES ('Admin', 'admin@coffee.com', 'admin', '$2y$10$8K1p/bFhF0TuWX8H2XQ6/.WX.GGH.j4aaC5bZjh6QVcXTOc1jKEdi', TRUE);
+INSERT INTO users (
+    name,
+    username,
+    email,
+    password,
+    is_admin
+) VALUES (
+    'Admin User',
+    'admin',
+    'admin@coffee.com',
+    '$2y$10$8K1p/bFhF0TuWX8H2XQ6/.WX.GGH.j4aaC5bZjh6QVcXTOc1jKEdi',
+    TRUE
+);

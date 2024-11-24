@@ -2,36 +2,83 @@
 session_start();
 require_once 'config.php';
 
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $username = filter_input(INPUT_POST, 'username', FILTER_SANITIZE_STRING);
+    $username = htmlspecialchars(trim($_POST['username']));
     $password = $_POST['password'];
 
-    try {
-        // Use prepared statement to prevent SQL injection
-        $login_query = $conn->prepare("SELECT * FROM users WHERE username = ? OR email = ?");
-        $login_query->execute([$username, $username]);
-        $user = $login_query->fetch();
+    error_log("Login attempt - Username: " . $username);
+    error_log("Password (length): " . strlen($password));
 
+    try {
+        $stmt = $conn->prepare("
+            SELECT * FROM users 
+            WHERE username = :username OR email = :email
+        ");
+        
+        $stmt->execute([
+            ':username' => $username,
+            ':email' => $username
+        ]);
+        
+        $user = $stmt->fetch();
+
+        error_log("User found: " . ($user ? 'Yes' : 'No'));
+        if ($user) {
+            error_log("User ID: " . $user['id']);
+            error_log("Username: " . $user['username']);
+            error_log("Is Admin: " . ($user['is_admin'] ? 'Yes' : 'No'));
+            error_log("Stored Password Hash: " . $user['password']);
+            error_log("Password Verification Result: " . (password_verify($password, $user['password']) ? 'True' : 'False'));
+        }
+        
         if ($user && password_verify($password, $user['password'])) {
             $_SESSION['user_id'] = $user['id'];
             $_SESSION['username'] = $user['username'];
             $_SESSION['name'] = $user['name'];
-            $_SESSION['is_admin'] = $user['is_admin'] ?? false;
+            $_SESSION['is_admin'] = (bool)$user['is_admin'];
             
-            // Redirect admin users to admin dashboard
+            error_log("Login successful - Session data: " . print_r($_SESSION, true));
+            
             if ($_SESSION['is_admin']) {
+                error_log("Redirecting to admin.php");
                 header("Location: admin.php");
+                exit();
             } else {
+                error_log("Redirecting to index.php");
                 header("Location: index.php");
+                exit();
             }
-            exit();
         } else {
             $error = "Invalid username/email or password!";
+            error_log("Login failed - Invalid credentials");
         }
     } catch(PDOException $e) {
-        error_log("Login error: " . $e->getMessage());
+        error_log("Database error: " . $e->getMessage());
         $error = "An error occurred. Please try again later.";
     }
+}
+
+try {
+    $stmt = $conn->prepare("SELECT COUNT(*) FROM users WHERE username = 'admin'");
+    $stmt->execute();
+    $adminExists = $stmt->fetchColumn();
+
+    if (!$adminExists) {
+        $adminPassword = password_hash('admin123', PASSWORD_DEFAULT);
+        error_log("Creating admin user with password hash: " . $adminPassword);
+        
+        $stmt = $conn->prepare("
+            INSERT INTO users (name, username, email, password, is_admin) 
+            VALUES ('Admin User', 'admin', 'admin@coffee.com', ?, TRUE)
+        ");
+        $stmt->execute([$adminPassword]);
+        error_log("Admin user created successfully");
+    }
+} catch(PDOException $e) {
+    error_log("Error checking/creating admin user: " . $e->getMessage());
 }
 ?>
 

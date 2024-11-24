@@ -8,7 +8,20 @@ if (!isset($_SESSION['user_id']) || !isset($_SESSION['is_admin']) || $_SESSION['
     exit();
 }
 
-// Fetch all orders with user and menu item details
+// Handle status update
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['order_id']) && isset($_POST['status'])) {
+    try {
+        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
+        $stmt->execute([$_POST['status'], $_POST['order_id']]);
+        $_SESSION['success_message'] = "Order status updated successfully!";
+        header('Location: admin.php');
+        exit();
+    } catch(PDOException $e) {
+        $_SESSION['error_message'] = "Failed to update order status.";
+    }
+}
+
+// Fetch all orders with user details
 try {
     $stmt = $conn->prepare("
         SELECT 
@@ -19,7 +32,8 @@ try {
             u.name as user_name,
             u.email as user_email,
             m.name as item_name,
-            m.price
+            m.price,
+            m.image_path
         FROM orders o
         JOIN users u ON o.user_id = u.id
         JOIN menu_items m ON o.menu_item_id = m.id
@@ -29,23 +43,7 @@ try {
     $orders = $stmt->fetchAll();
 } catch(PDOException $e) {
     error_log("Error fetching orders: " . $e->getMessage());
-    $error = "An error occurred while fetching orders.";
-}
-
-// Handle order status updates
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
-    $order_id = $_POST['order_id'];
-    $new_status = $_POST['status'];
-    
-    try {
-        $stmt = $conn->prepare("UPDATE orders SET status = ? WHERE id = ?");
-        $stmt->execute([$new_status, $order_id]);
-        header("Location: admin.php");
-        exit();
-    } catch(PDOException $e) {
-        error_log("Error updating order status: " . $e->getMessage());
-        $error = "Failed to update order status.";
-    }
+    $orders = [];
 }
 ?>
 
@@ -54,97 +52,145 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_status'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Coffee Shop</title>
+    <title>Admin Dashboard</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.7.2/font/bootstrap-icons.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
     <style>
         .admin-container {
-            padding-top: var(--navbar-height);
-            min-height: 100vh;
-            background: var(--light-pink-color);
+            padding-top: 80px;
         }
-        
         .order-card {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 20px;
             transition: transform 0.2s;
         }
-        
         .order-card:hover {
             transform: translateY(-5px);
         }
-        
-        .status-pending { color: #ffc107; }
-        .status-processing { color: #0dcaf0; }
-        .status-completed { color: #198754; }
-        .status-cancelled { color: #dc3545; }
-        
-        .admin-title {
-            color: var(--dark-color);
-            margin-bottom: 2rem;
+        .search-container {
+            margin-bottom: 30px;
         }
     </style>
 </head>
 <body>
     <?php include 'header.php'; ?>
-    
-    <div class="admin-container">
-        <div class="container mt-4">
-            <div class="row mb-4">
-                <div class="col">
-                    <h2 class="admin-title">Order Management</h2>
+
+    <div class="container admin-container">
+        <h1 class="mb-4">Admin Dashboard</h1>
+
+        <?php if (isset($_SESSION['success_message'])): ?>
+            <div class="alert alert-success">
+                <?php 
+                    echo $_SESSION['success_message'];
+                    unset($_SESSION['success_message']);
+                ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Search and Filter -->
+        <div class="search-container bg-light p-3 rounded">
+            <div class="row">
+                <div class="col-md-6">
+                    <input type="text" id="orderSearch" class="form-control" placeholder="Search orders...">
+                </div>
+                <div class="col-md-6">
+                    <select id="statusFilter" class="form-select">
+                        <option value="">All Statuses</option>
+                        <option value="pending">Pending</option>
+                        <option value="processing">Processing</option>
+                        <option value="completed">Completed</option>
+                        <option value="cancelled">Cancelled</option>
+                    </select>
                 </div>
             </div>
+        </div>
 
-            <?php if (isset($error)): ?>
-                <div class="alert alert-danger"><?php echo $error; ?></div>
-            <?php endif; ?>
-
-            <div class="row">
-                <?php foreach ($orders as $order): ?>
-                    <div class="col-12 mb-4">
-                        <div class="order-card">
-                            <div class="d-flex justify-content-between align-items-start">
-                                <div>
-                                    <h5>Order #<?php echo $order['order_id']; ?></h5>
-                                    <p class="mb-1"><strong>Customer:</strong> <?php echo htmlspecialchars($order['user_name']); ?></p>
-                                    <p class="mb-1"><strong>Email:</strong> <?php echo htmlspecialchars($order['user_email']); ?></p>
-                                    <p class="mb-1"><strong>Item:</strong> <?php echo htmlspecialchars($order['item_name']); ?></p>
-                                    <p class="mb-1"><strong>Quantity:</strong> <?php echo $order['quantity']; ?></p>
-                                    <p class="mb-1"><strong>Total:</strong> LKR <?php echo number_format($order['quantity'] * $order['price'], 2); ?></p>
-                                    <p class="mb-1"><strong>Date:</strong> <?php echo date('M d, Y h:i A', strtotime($order['created_at'])); ?></p>
-                                </div>
-                                <span class="badge bg-<?php 
-                                    echo match($order['status']) {
-                                        'pending' => 'warning',
-                                        'processing' => 'info',
-                                        'completed' => 'success',
-                                        'cancelled' => 'danger',
-                                        default => 'secondary'
-                                    };
-                                ?>">
-                                    <?php echo ucfirst($order['status']); ?>
-                                </span>
+        <!-- Orders List -->
+        <div class="row">
+            <?php foreach ($orders as $order): ?>
+                <div class="col-md-6 mb-4">
+                    <div class="card order-card">
+                        <div class="row g-0">
+                            <div class="col-md-4">
+                                <img src="images/<?php echo htmlspecialchars($order['image_path']); ?>" 
+                                     class="img-fluid rounded-start" 
+                                     alt="<?php echo htmlspecialchars($order['item_name']); ?>">
                             </div>
-                            
-                            <form action="admin.php" method="POST" class="order-status-form">
-                                <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
-                                <select name="status" class="form-select">
-                                    <option value="pending" <?php echo $order['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
-                                    <option value="processing" <?php echo $order['status'] === 'processing' ? 'selected' : ''; ?>>Processing</option>
-                                    <option value="completed" <?php echo $order['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
-                                    <option value="cancelled" <?php echo $order['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
-                                </select>
-                                <button type="submit" name="update_status" class="btn btn-primary">Update Status</button>
-                            </form>
+                            <div class="col-md-8">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between">
+                                        <h5 class="card-title">Order #<?php echo $order['order_id']; ?></h5>
+                                        <span class="badge bg-<?php 
+                                            echo match($order['status']) {
+                                                'completed' => 'success',
+                                                'processing' => 'warning',
+                                                'cancelled' => 'danger',
+                                                default => 'info'
+                                            };
+                                        ?>">
+                                            <?php echo ucfirst($order['status']); ?>
+                                        </span>
+                                    </div>
+                                    <p class="card-text">
+                                        <small class="text-muted">
+                                            <?php echo date('M d, Y h:i A', strtotime($order['created_at'])); ?>
+                                        </small>
+                                    </p>
+                                    <p class="card-text"><strong>Customer:</strong> <?php echo htmlspecialchars($order['user_name']); ?></p>
+                                    <p class="card-text"><strong>Email:</strong> <?php echo htmlspecialchars($order['user_email']); ?></p>
+                                    <p class="card-text"><strong>Item:</strong> <?php echo htmlspecialchars($order['item_name']); ?></p>
+                                    <p class="card-text"><strong>Quantity:</strong> <?php echo $order['quantity']; ?></p>
+                                    <p class="card-text"><strong>Total:</strong> LKR <?php echo number_format($order['price'] * $order['quantity'], 2); ?></p>
+                                    
+                                    <!-- Status Update Form -->
+                                    <form action="admin.php" method="POST" class="mt-3">
+                                        <input type="hidden" name="order_id" value="<?php echo $order['order_id']; ?>">
+                                        <div class="input-group">
+                                            <select name="status" class="form-select">
+                                                <option value="pending" <?php echo $order['status'] === 'pending' ? 'selected' : ''; ?>>Pending</option>
+                                                <option value="processing" <?php echo $order['status'] === 'processing' ? 'selected' : ''; ?>>Processing</option>
+                                                <option value="completed" <?php echo $order['status'] === 'completed' ? 'selected' : ''; ?>>Completed</option>
+                                                <option value="cancelled" <?php echo $order['status'] === 'cancelled' ? 'selected' : ''; ?>>Cancelled</option>
+                                            </select>
+                                            <button type="submit" class="btn btn-primary">Update Status</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                <?php endforeach; ?>
-            </div>
+                </div>
+            <?php endforeach; ?>
         </div>
     </div>
+
+    <script>
+        // Search functionality
+        document.getElementById('orderSearch').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            filterOrders(searchTerm, document.getElementById('statusFilter').value);
+        });
+
+        // Status filter functionality
+        document.getElementById('statusFilter').addEventListener('change', function(e) {
+            const searchTerm = document.getElementById('orderSearch').value.toLowerCase();
+            filterOrders(searchTerm, e.target.value);
+        });
+
+        function filterOrders(searchTerm, statusFilter) {
+            const orders = document.querySelectorAll('.order-card');
+            
+            orders.forEach(order => {
+                const orderText = order.textContent.toLowerCase();
+                const orderStatus = order.querySelector('.badge').textContent.toLowerCase();
+                
+                const matchesSearch = orderText.includes(searchTerm);
+                const matchesStatus = !statusFilter || orderStatus === statusFilter.toLowerCase();
+                
+                order.closest('.col-md-6').style.display = 
+                    (matchesSearch && matchesStatus) ? 'block' : 'none';
+            });
+        }
+    </script>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 </body>
